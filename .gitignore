@@ -1,4 +1,5 @@
 datasets
+data
 image_data*.h5
 *.pth
 predictions*
