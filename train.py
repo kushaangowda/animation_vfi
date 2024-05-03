@@ -50,17 +50,16 @@ def calculate_ssim_psnr(img1, img2):
     psnr = PSNR().cuda() 
 
     ssim_value = ssim(img1, img2)
-
     psnr_value = psnr(img1, img2)
 
-    return ssim_value, psnr_value
+    return ssim_value.detach(), psnr_value.detach()
 
 def train(data_loader,test_loader,model,epochs,device,criteria,optim,local_rank,rank):
     print(f"Proc {rank} using device {device}")
     model = DDP(model,device_ids=[local_rank])
     total_step = len(data_loader)
     best_test_ssim = 0
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S") 
 
     for epoch in range(epochs):
         avg_train_loss = 0
@@ -77,11 +76,11 @@ def train(data_loader,test_loader,model,epochs,device,criteria,optim,local_rank,
         print(f"Epoch {epoch + 1}:")
         data_iterator = iter(data_loader)
 
-        for i in tqdm(range(len(data_loader)),desc='Training',disable=(rank != 0)):
+        for _ in tqdm(range(len(data_loader)),desc='Training',disable=(rank != 0)):
             model.train()
             images,labels = next(data_iterator)
             # Move tensors to configured device
-            print(images[0].shape, images[1].shape)
+            # print(images[0].shape, images[1].shape)
             images = torch.cat(images,dim=1)
             images = images.to(device)
             labels = labels.to(device)
@@ -106,10 +105,11 @@ def train(data_loader,test_loader,model,epochs,device,criteria,optim,local_rank,
             total_train_batch += 1
 
         test_iterator = iter(test_loader)
-        for i in  tqdm(range(len(test_loader)),desc='Testing'):
+        for _ in  tqdm(range(len(test_loader)),desc='Testing'):
             model.eval()
             images,labels = next(test_iterator)
             # Move tensors to configured device
+            images = torch.cat(images,dim=1)
             images = images.to(device)
             labels = labels.to(device)
 
@@ -131,6 +131,7 @@ def train(data_loader,test_loader,model,epochs,device,criteria,optim,local_rank,
         avg_test_ssim = avg_test_ssim/total_test_batch
         avg_test_psnr = avg_test_psnr/total_test_batch
         avg_test_loss = avg_test_loss/total_test_batch
+        
         if rank == 0:
             print(
                 f'Proc: {rank} Epoch [{epoch+1}/{epochs}], \
