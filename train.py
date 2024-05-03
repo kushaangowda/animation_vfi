@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
-from model.ResUNet import ResUNet
-from model.TransUNet import TransUNet
-from model.UNet import UNet
+from models.ResUNet import ResUNet
+from models.TransUNet import TransUNet
+from models.UNet import UNet
 from utils.data_loader import create_loaders
 from torch.nn.parallel import DistributedDataParallel as DDP
 from tqdm import tqdm
@@ -81,6 +81,8 @@ def train(data_loader,test_loader,model,epochs,device,criteria,optim,local_rank,
             model.train()
             images,labels = next(data_iterator)
             # Move tensors to configured device
+            print(images[0].shape, images[1].shape)
+            images = torch.cat(images,dim=1)
             images = images.to(device)
             labels = labels.to(device)
             optim.zero_grad()
@@ -140,15 +142,15 @@ def train(data_loader,test_loader,model,epochs,device,criteria,optim,local_rank,
                 Test Loss: {avg_test_loss:.4f}'
             )
 
-            wandb.log({
-                "Average Training Loss": avg_train_loss,
-                "Average Training SSIM": avg_train_ssim,
-                 "Average Training PSNR": avg_train_psnr,
-                "Average Test Loss": avg_test_loss,
-                "Average Test SSIM": avg_test_ssim,
-                "Average Test PSNR": avg_test_psnr,
-                "epoch": epoch
-            })
+            # wandb.log({
+            #     "Average Training Loss": avg_train_loss,
+            #     "Average Training SSIM": avg_train_ssim,
+            #      "Average Training PSNR": avg_train_psnr,
+            #     "Average Test Loss": avg_test_loss,
+            #     "Average Test SSIM": avg_test_ssim,
+            #     "Average Test PSNR": avg_test_psnr,
+            #     "epoch": epoch
+            # })
 
 
         if avg_test_ssim > best_test_ssim and rank == 0:

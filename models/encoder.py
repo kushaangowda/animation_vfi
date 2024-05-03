@@ -13,10 +13,14 @@ class ResEncoderBlock(nn.Module):
         self.downsample = Downsample(out_channels)
         
     def forward(self, x):
+        print(f"E:{x.shape}")
         x = self.resnet(x)
+        print(f"E:{x.shape}")
         resO = x
         tranO = x
         x = self.downsample(x)
+        print(f"E:{x.shape}")
+        print("----------")
         return x, resO, tranO
 
 class ResEncoder(nn.Module):

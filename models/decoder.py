@@ -12,9 +12,13 @@ class ResDecoderBlock(nn.Module):
         self.upsample = Upsample(in_channels)
     
     def forward(self, x, context):
+        print(f"D:{x.shape}")
         x = self.upsample(x)
         r_context,_ = context
+        print(f"DC:{x.shape}")
         x = self.resnet(torch.cat((x,r_context),dim=1))
+        print(f"D:{x.shape}")
+        print("-------")
         return x
 
 class ResDecoder(nn.Module):

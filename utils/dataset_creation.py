@@ -41,13 +41,14 @@ def process_images(image_folder, flows_folder, total_images=None):
                 count += 1
                 
             except Exception as e:
-                pass
+                print(e)
+                raise Exception("")
 
 
 if __name__ == '__main__':
 
     process_images(
-        'H:/Research/datasets/atd_12k/datasets/test_2k_540p/', 
-        'H:/Research/datasets/atd_12k/datasets/test_2k_pre_calc_sgm_flows/',
+        '../datasets/test_2k_540p/', 
+        '../datasets/test_2k_pre_calc_sgm_flows/',
         total_images=None
     )

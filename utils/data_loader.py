@@ -21,12 +21,12 @@ class ImageDataset(Dataset):
         input_frame1 = torch.tensor(data['frame1'][:], dtype=torch.float32).permute(2,0,1) / 255.0
         
         if self.mode == 'train':
-            input_flow = torch.tensor(data['flow13'][:], dtype=torch.float32).permute(2,0,1)
+            input_flow = torch.tensor(data['flow13'][:], dtype=torch.float32)
             output_frame = torch.tensor(data['frame3'][:], dtype=torch.float32).permute(2,0,1) / 255.0 
                        
         elif self.mode == 'test':
-            flow13 = torch.tensor(data['flow13'][:], dtype=torch.float32).permute(2,0,1)
-            flow31 = torch.tensor(data['flow31'][:], dtype=torch.float32).permute(2,0,1)
+            flow13 = torch.tensor(data['flow13'][:], dtype=torch.float32)
+            flow31 = torch.tensor(data['flow31'][:], dtype=torch.float32)
             input_flow = (flow13 + flow31)*0.5
             
             output_frame = torch.tensor(data['frame2'][:], dtype=torch.float32).permute(2,0,1) / 255.0            
@@ -41,6 +41,7 @@ class ImageDataset(Dataset):
 def create_loaders(file_path, batch_size=32, test_size=0.2, random_seed=42, n_w=2):
     with h5py.File(file_path, 'r') as file:
         total_images = len(file)
+        print(total_images)
         indices = list(range(total_images))
     
     train_indices, test_indices = train_test_split(indices, test_size=test_size, random_state=random_seed)

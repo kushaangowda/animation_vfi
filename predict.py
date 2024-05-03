@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
-from model.ResUNet import ResUNet
-from model.TransUNet import TransUNet
-from model.UNet import UNet
+from models.ResUNet import ResUNet
+from models.TransUNet import TransUNet
+from models.UNet import UNet
 from utils.data_loader import create_test_loader
 from torch.nn.parallel import DistributedDataParallel as DDP
 from tqdm import tqdm
