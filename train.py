@@ -11,6 +11,25 @@ import datetime
 import numpy as np
 from piqa import SSIM, PSNR
 import wandb
+import torch
+import torch.nn as nn
+import torchvision.models as models
+
+class PerceptualLoss(nn.Module):
+    def __init__(self, device):
+        super(PerceptualLoss, self).__init__()
+        vgg = models.vgg16(weights=models.VGG16_Weights.DEFAULT).features[:16]
+        self.feature_extractor = nn.Sequential(*list(vgg.children())[:16])
+        self.feature_extractor.to(device)  # Move feature extractor to the specified device
+        for param in self.feature_extractor.parameters():
+            param.requires_grad = False
+
+    def forward(self, input, target):
+        perception_loss = nn.MSELoss()
+        input_features = self.feature_extractor(input)
+        target_features = self.feature_extractor(target)
+        return perception_loss(input_features, target_features)
+
 
 def dataload(file_path,batch_size,n_w):
     train_loader, test_loader = create_loaders(file_path, batch_size=batch_size, test_size=0.2, 
@@ -41,7 +60,7 @@ def setup(lr,wd,in_channels,out_channels,n_layers=5,bn_layers=2,model_path=None,
             print("Couldn't load model weights")
 
     optim = torch.optim.Adam(model.parameters(), lr=lr,weight_decay=wd)
-    criterion1 = nn.MSELoss()
+    criterion1 = PerceptualLoss(device='cuda')
     return model,[criterion1],optim
 
 def calculate_ssim_psnr(img1, img2):
@@ -58,7 +77,7 @@ def train(data_loader,test_loader,model,epochs,device,criteria,optim,local_rank,
     print(f"Proc {rank} using device {device}")
     model = DDP(model,device_ids=[local_rank])
     total_step = len(data_loader)
-    best_test_ssim = 0
+    best_test_ssim = 10
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S") 
 
     for epoch in range(epochs):
@@ -154,7 +173,7 @@ def train(data_loader,test_loader,model,epochs,device,criteria,optim,local_rank,
             # })
 
 
-        if avg_test_ssim > best_test_ssim and rank == 0:
-            best_test_ssim = avg_test_ssim
+        if avg_test_loss < best_test_ssim and rank == 0:
+            best_test_ssim = avg_test_loss
             torch.save(model.module.state_dict(), f'best_model_{timestamp}.pth')
-            print(f'Best model saved with Test Acc: {avg_test_ssim:.4f}')
+            print(f'Best model saved with Test Acc: {avg_test_loss:.4f}')
