@@ -55,9 +55,11 @@ def calculate_ssim_psnr(img1, img2):
 
     return ssim_value.detach(), psnr_value.detach()
 
-def save_img(labels, outputs, idx):
+def save_img(inputs, labels, outputs, idx, npy):
+    inputs = inputs.permute(0,2,3,1).cpu().numpy()
     outputs = outputs.permute(0,2,3,1).cpu().numpy()
     labels = labels.permute(0,2,3,1).cpu().numpy()
+    npy = npy.permute(0,2,3,1).cpu().numpy()
 
     for _ in range(len(outputs)):
         rgb_image = (outputs * 255).astype(np.uint8)
@@ -67,6 +69,12 @@ def save_img(labels, outputs, idx):
         rgb_image = (labels * 255).astype(np.uint8)
         image_path = os.path.join("predictions", f'image_orig_{idx}.png')
         io.imsave(image_path, rgb_image)
+        
+        rgb_image = (inputs * 255).astype(np.uint8)
+        image_path = os.path.join("predictions", f'image_input_{idx}.png')
+        io.imsave(image_path, rgb_image)
+        
+        np.save(os.path.join("predictions", f'optflow_{idx}.npy'), npy)
 
 def predict(test_loader,model,device,num_batches=None):
     if os.path.exists("predictions"):
@@ -118,6 +126,6 @@ def predict(test_loader,model,device,num_batches=None):
             
             print(acc_vals[i])
 
-            save_img(labels, outputs.detach(), i)
+            save_img(images[:,:3], labels, outputs.detach(), i, images[:,3:])
     
     

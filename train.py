@@ -19,16 +19,22 @@ class PerceptualLoss(nn.Module):
     def __init__(self, device):
         super(PerceptualLoss, self).__init__()
         vgg = models.vgg16(weights=models.VGG16_Weights.DEFAULT).features[:16]
-        self.feature_extractor = nn.Sequential(*list(vgg.children())[:16])
-        self.feature_extractor.to(device)  # Move feature extractor to the specified device
-        for param in self.feature_extractor.parameters():
+        self.feature_extractor1 = nn.Sequential(*list(vgg.children())[:16]).to(device)
+        self.feature_extractor2 = nn.Sequential(*list(vgg.children())[:8]).to(device)
+        self.feature_extractor3 = nn.Sequential(*list(vgg.children())[:12]).to(device)
+        
+        for param in self.feature_extractor1.parameters():
+            param.requires_grad = False
+        for param in self.feature_extractor2.parameters():
+            param.requires_grad = False
+        for param in self.feature_extractor3.parameters():
             param.requires_grad = False
 
     def forward(self, input, target):
-        perception_loss = nn.MSELoss()
-        input_features = self.feature_extractor(input)
-        target_features = self.feature_extractor(target)
-        return perception_loss(input_features, target_features)
+        ploss1 = nn.MSELoss()(self.feature_extractor1(input), self.feature_extractor1(target))
+        ploss2 = nn.MSELoss()(self.feature_extractor2(input), self.feature_extractor2(target))
+        ploss3 = nn.MSELoss()(self.feature_extractor3(input), self.feature_extractor3(target))
+        return ploss1 + ploss2 + ploss3
 
 
 def dataload(file_path,batch_size,n_w):
@@ -61,7 +67,8 @@ def setup(lr,wd,in_channels,out_channels,n_layers=5,bn_layers=2,model_path=None,
 
     optim = torch.optim.Adam(model.parameters(), lr=lr,weight_decay=wd)
     criterion1 = PerceptualLoss(device='cuda')
-    return model,[criterion1],optim
+    criterion2 = nn.MSELoss()
+    return model,[criterion1,criterion2],optim
 
 def calculate_ssim_psnr(img1, img2):
     # Initialize metrics
@@ -98,16 +105,21 @@ def train(data_loader,test_loader,model,epochs,device,criteria,optim,local_rank,
         for _ in tqdm(range(len(data_loader)),desc='Training',disable=(rank != 0)):
             model.train()
             images,labels = next(data_iterator)
+            optFlow = images[1].to(device)
             # Move tensors to configured device
             # print(images[0].shape, images[1].shape)
             images = torch.cat(images,dim=1)
             images = images.to(device)
             labels = labels.to(device)
             optim.zero_grad()
+            
+            optFlow = (optFlow[:,0]**2 + optFlow[:,1]**2)**0.5
+            optFlowMask = (optFlow >= 10).to(torch.uint8).unsqueeze(1)
+            
 
             # Forward pass
             outputs = model(images)
-            loss = criteria[0](outputs, labels)
+            loss = criteria[0](outputs, labels) + criteria[1](optFlowMask*outputs, optFlowMask*labels)
 
             # Backward and optimize
             loss.backward()
@@ -127,14 +139,18 @@ def train(data_loader,test_loader,model,epochs,device,criteria,optim,local_rank,
         for _ in  tqdm(range(len(test_loader)),desc='Testing'):
             model.eval()
             images,labels = next(test_iterator)
+            optFlow = images[1].to(device)
             # Move tensors to configured device
             images = torch.cat(images,dim=1)
             images = images.to(device)
             labels = labels.to(device)
+            
+            optFlow = (optFlow[:,0]**2 + optFlow[:,1]**2)**0.5
+            optFlowMask = (optFlow >= 10).to(torch.uint8).unsqueeze(1)
 
             # Calculate accuracy
             outputs = model(images)
-            loss = criteria[0](outputs, labels)
+            loss = criteria[0](outputs, labels) + criteria[1](optFlowMask*outputs, optFlowMask*labels)
 
             avg_test_loss += loss.item()
             

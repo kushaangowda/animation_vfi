@@ -62,7 +62,7 @@ def create_test_loader(file_path, batch_size=32, test_size=0.2, random_seed=42, 
     
     _, test_indices = train_test_split(indices, test_size=test_size, random_state=random_seed)
     
-    test_dataset = ImageDataset(file_path, test_indices, mode='test')
+    test_dataset = ImageDataset(file_path, test_indices, mode='train')
     
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
     

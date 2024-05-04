@@ -6,6 +6,6 @@ For general requiremenets, refer to the [project instruction document](https://d
 
 export LD_LIBRARY_PATH=""
 
-torchrun --nproc_per_node=1 main.py --batch_size=32 --epochs=20 --data_path="image_data.h5" --mode="train" --type=1
+torchrun --nproc_per_node=1 main.py --batch_size=16 --epochs=50 --data_path="image_data.h5" --mode="train" --type=1 --path=""
 
-torchrun --nproc_per_node=1 main.py --batch_size=1 --data_path="image_data.h5" --mode="predict" --type=1 --path=""
+torchrun --nproc_per_node=1 main.py --batch_size=1 --data_path="image_data.h5" --mode="predict" --type=1 --path="good_model_resnet_percloss_60ssim.pth"
