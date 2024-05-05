@@ -20,6 +20,10 @@ class ImageDataset(Dataset):
         
         input_frame1 = torch.tensor(data['frame1'][:], dtype=torch.float32).permute(2,0,1) / 255.0
         
+        mask = np.mean(data['frame1'][:], -1) - np.mean(data['frame3'][:], -1)
+        mask = np.expand_dims(np.abs(mask), -1)
+        mask = torch.tensor(mask).permute(2,0,1) / 255.0
+        
         if self.mode == 'train':
             input_flow = torch.tensor(data['flow13'][:], dtype=torch.float32)
             output_frame = torch.tensor(data['frame3'][:], dtype=torch.float32).permute(2,0,1) / 255.0 
@@ -33,7 +37,7 @@ class ImageDataset(Dataset):
         else:
             raise Exception('Invalid mode')
         
-        return (input_frame1, input_flow), output_frame
+        return (input_frame1, input_flow, mask), output_frame
 
     def close(self):
         self.file.close()

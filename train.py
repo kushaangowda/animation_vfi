@@ -67,7 +67,7 @@ def setup(lr,wd,in_channels,out_channels,n_layers=5,bn_layers=2,model_path=None,
 
     optim = torch.optim.Adam(model.parameters(), lr=lr,weight_decay=wd)
     criterion1 = PerceptualLoss(device='cuda')
-    criterion2 = nn.MSELoss()
+    criterion2 = nn.L1Loss()
     return model,[criterion1,criterion2],optim
 
 def calculate_ssim_psnr(img1, img2):
@@ -105,7 +105,9 @@ def train(data_loader,test_loader,model,epochs,device,criteria,optim,local_rank,
         for _ in tqdm(range(len(data_loader)),desc='Training',disable=(rank != 0)):
             model.train()
             images,labels = next(data_iterator)
-            optFlow = images[1].to(device)
+            # optFlow = images[1].to(device)
+            mask = images[2].to(device)
+            images = images[:-1]
             # Move tensors to configured device
             # print(images[0].shape, images[1].shape)
             images = torch.cat(images,dim=1)
@@ -113,13 +115,13 @@ def train(data_loader,test_loader,model,epochs,device,criteria,optim,local_rank,
             labels = labels.to(device)
             optim.zero_grad()
             
-            optFlow = (optFlow[:,0]**2 + optFlow[:,1]**2)**0.5
-            optFlowMask = (optFlow >= 10).to(torch.uint8).unsqueeze(1)
+            # optFlow = (optFlow[:,0]**2 + optFlow[:,1]**2)**0.5
+            # optFlowMask = (optFlow >= 10).to(torch.uint8).unsqueeze(1)
             
 
             # Forward pass
             outputs = model(images)
-            loss = criteria[0](outputs, labels) + criteria[1](optFlowMask*outputs, optFlowMask*labels)
+            loss = criteria[0](outputs, labels) + criteria[1](mask*outputs, mask*labels)
 
             # Backward and optimize
             loss.backward()
@@ -139,18 +141,20 @@ def train(data_loader,test_loader,model,epochs,device,criteria,optim,local_rank,
         for _ in  tqdm(range(len(test_loader)),desc='Testing'):
             model.eval()
             images,labels = next(test_iterator)
-            optFlow = images[1].to(device)
+            # optFlow = images[1].to(device)
+            mask = images[2].to(device)
+            images = images[:-1]
             # Move tensors to configured device
             images = torch.cat(images,dim=1)
             images = images.to(device)
             labels = labels.to(device)
             
-            optFlow = (optFlow[:,0]**2 + optFlow[:,1]**2)**0.5
-            optFlowMask = (optFlow >= 10).to(torch.uint8).unsqueeze(1)
+            # optFlow = (optFlow[:,0]**2 + optFlow[:,1]**2)**0.5
+            # optFlowMask = (optFlow >= 10).to(torch.uint8).unsqueeze(1)
 
             # Calculate accuracy
             outputs = model(images)
-            loss = criteria[0](outputs, labels) + criteria[1](optFlowMask*outputs, optFlowMask*labels)
+            loss = criteria[0](outputs, labels) + criteria[1](mask*outputs, mask*labels)
 
             avg_test_loss += loss.item()
             
