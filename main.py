@@ -14,7 +14,7 @@ def main(file_path,in_channels,out_channels,lr,wd,world_size,rank,local_rank,epo
 
     if mode == 'train':
         if rank == 0: # init wandb only if master process
-            wandb.init(project="Image colorization", config={
+            wandb.init(project="Video Frame Interpolation", config={
                 "epochs": epochs,
                 "batch_size": batch_size,
                 "learning_rate": lr,

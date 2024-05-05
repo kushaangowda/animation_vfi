@@ -92,6 +92,7 @@ def predict(test_loader,model,device,num_batches=None):
 
     for i in  range(num_batches):
         images,labels = next(test_iterator)
+        images = images[:-1]
         images = torch.cat(images,dim=1)
             
         model.eval()
@@ -112,6 +113,7 @@ def predict(test_loader,model,device,num_batches=None):
 
     for i in  range(num_batches):
         images,labels = next(test_iterator)
+        images = images[:-1]
         
         if i in top_indices:
             images = torch.cat(images,dim=1)

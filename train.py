@@ -96,6 +96,7 @@ def train(data_loader,test_loader,model,epochs,device,criteria,optim,local_rank,
         avg_test_psnr = 0
         total_train_batch = 0
         total_test_batch = 0
+        lamda = 1.2
         
         data_loader.sampler.set_epoch(epoch)
 
@@ -121,7 +122,7 @@ def train(data_loader,test_loader,model,epochs,device,criteria,optim,local_rank,
 
             # Forward pass
             outputs = model(images)
-            loss = criteria[0](outputs, labels) + criteria[1](mask*outputs, mask*labels)
+            loss = criteria[0](outputs, labels) + lamda*criteria[1](mask*outputs, mask*labels)
 
             # Backward and optimize
             loss.backward()
@@ -154,7 +155,7 @@ def train(data_loader,test_loader,model,epochs,device,criteria,optim,local_rank,
 
             # Calculate accuracy
             outputs = model(images)
-            loss = criteria[0](outputs, labels) + criteria[1](mask*outputs, mask*labels)
+            loss = criteria[0](outputs, labels) + lamda*criteria[1](mask*outputs, mask*labels)
 
             avg_test_loss += loss.item()
             
