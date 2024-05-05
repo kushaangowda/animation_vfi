@@ -178,15 +178,15 @@ def train(data_loader,test_loader,model,epochs,device,criteria,optim,local_rank,
                 Test Loss: {avg_test_loss:.4f}'
             )
 
-            # wandb.log({
-            #     "Average Training Loss": avg_train_loss,
-            #     "Average Training SSIM": avg_train_ssim,
-            #      "Average Training PSNR": avg_train_psnr,
-            #     "Average Test Loss": avg_test_loss,
-            #     "Average Test SSIM": avg_test_ssim,
-            #     "Average Test PSNR": avg_test_psnr,
-            #     "epoch": epoch
-            # })
+            wandb.log({
+                "Average Training Loss": avg_train_loss,
+                "Average Training SSIM": avg_train_ssim,
+                 "Average Training PSNR": avg_train_psnr,
+                "Average Test Loss": avg_test_loss,
+                "Average Test SSIM": avg_test_ssim,
+                "Average Test PSNR": avg_test_psnr,
+                "epoch": epoch
+            })
 
 
         if avg_test_loss < best_test_ssim and rank == 0:

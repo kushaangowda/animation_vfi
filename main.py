@@ -13,13 +13,13 @@ def main(file_path,in_channels,out_channels,lr,wd,world_size,rank,local_rank,epo
         print("Error: Distrbuted training is not supported without GPU")
 
     if mode == 'train':
-        # if rank == 0: # init wandb only if master process
-        #     wandb.init(project="Image colorization", config={
-        #         "epochs": epochs,
-        #         "batch_size": batch_size,
-        #         "learning_rate": lr,
-        #         "weight_decay": wd,
-        #     }) 
+        if rank == 0: # init wandb only if master process
+            wandb.init(project="Image colorization", config={
+                "epochs": epochs,
+                "batch_size": batch_size,
+                "learning_rate": lr,
+                "weight_decay": wd,
+            }) 
         # init the process group for DDL
         init_process_group(backend='nccl',rank=rank,world_size=world_size)
         torch.cuda.set_device(local_rank)
@@ -35,8 +35,8 @@ def main(file_path,in_channels,out_channels,lr,wd,world_size,rank,local_rank,epo
         model = model.to(device)
         train(data_loader,test_loader,model,epochs,device,criteria,optim,local_rank,rank)
 
-        # if rank == 0:
-        #     wandb.finish()
+        if rank == 0:
+            wandb.finish()
 
         destroy_process_group()
     
@@ -49,6 +49,7 @@ def main(file_path,in_channels,out_channels,lr,wd,world_size,rank,local_rank,epo
         model = setup_predict(
                     in_channels,out_channels,
                     n_layers=4,bn_layers=2,
+                    model_type=type,
                     model_path=model_path
                 )
         model = model.to(device)
