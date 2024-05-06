@@ -121,7 +121,7 @@ def train(data_loader,test_loader,model,epochs,device,criteria,optim,local_rank,
             
 
             # Forward pass
-            outputs = model(images)
+            outputs = model(images,mask)
             loss = criteria[0](outputs, labels) + lamda*criteria[1](mask*outputs, mask*labels)
 
             # Backward and optimize
@@ -154,7 +154,7 @@ def train(data_loader,test_loader,model,epochs,device,criteria,optim,local_rank,
             # optFlowMask = (optFlow >= 10).to(torch.uint8).unsqueeze(1)
 
             # Calculate accuracy
-            outputs = model(images)
+            outputs = model(images,mask)
             loss = criteria[0](outputs, labels) + lamda*criteria[1](mask*outputs, mask*labels)
 
             avg_test_loss += loss.item()

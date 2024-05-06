@@ -86,8 +86,8 @@ if __name__ == '__main__':
     batch_size = args.batch_size
     epochs = args.epochs
 
-    in_channels = [5,16,32,64]
-    out_channels = [16,32,64,128]
+    in_channels = [5,32,64,128]
+    out_channels = [32,64,128,256]
 
     main(args.data_path,in_channels,out_channels,args.lr,args.wd,args.world_size,
             args.rank,args.local_rank,epochs,batch_size,args.mode,n_workers=args.workers

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
-from layers import BasicBlock, TransformerDecoderBlock, Upsample
+from layers import BasicBlock, TransformerDecoderBlock, Upsample, AttentionModule
 
 class ResDecoderBlock(nn.Module):
     def __init__(self,in_channels,out_channels,patch_dim,n_heads,stride,padding,resnet_bias
@@ -10,15 +10,13 @@ class ResDecoderBlock(nn.Module):
         self.p = patch_dim*patch_dim
         self.resnet = BasicBlock(2*in_channels,out_channels,stride,padding,resnet_bias)
         self.upsample = Upsample(in_channels)
+        self.attention = AttentionModule(1)
     
-    def forward(self, x, context):
-        # print(f"D:{x.shape}")
+    def forward(self, x, context, mask):
         x = self.upsample(x)
         r_context,_ = context
-        # print(f"DC:{x.shape}")
         x = self.resnet(torch.cat((x,r_context),dim=1))
-        # print(f"D:{x.shape}")
-        # print("-------")
+        x = self.attention(x,mask)
         return x
 
 class ResDecoder(nn.Module):
@@ -32,9 +30,9 @@ class ResDecoder(nn.Module):
                             resnet_bias,dim_ff,t_layers)
             for i in range(num_layers)
         ])
-    def forward(self, x, skips):
+    def forward(self, x, skips, mask):
         for i,layer in enumerate(self.layers):
-            x = layer(x,skips.pop())
+            x = layer(x,skips.pop(), mask)
         return x
 
 class TransDecoderBlock(nn.Module):

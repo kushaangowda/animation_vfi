@@ -92,6 +92,7 @@ def predict(test_loader,model,device,num_batches=None):
 
     for i in  range(num_batches):
         images,labels = next(test_iterator)
+        mask = images[2].to(device)
         images = images[:-1]
         images = torch.cat(images,dim=1)
             
@@ -101,7 +102,7 @@ def predict(test_loader,model,device,num_batches=None):
         labels = labels.to(device)
         
         # Calculate accuracy
-        outputs = model(images)
+        outputs = model(images,mask)
         
         train_ssim , train_psnr = calculate_ssim_psnr(outputs, labels)
         
@@ -113,9 +114,10 @@ def predict(test_loader,model,device,num_batches=None):
 
     for i in  range(num_batches):
         images,labels = next(test_iterator)
+        mask = images[2].to(device)
         images = images[:-1]
         
-        if i in top_indices:
+        if i in top_indices or i in [317,371]:
             images = torch.cat(images,dim=1)
                 
             model.eval()
@@ -124,7 +126,7 @@ def predict(test_loader,model,device,num_batches=None):
             labels = labels.to(device)
             
             # Calculate accuracy
-            outputs = model(images)
+            outputs = model(images,mask)
             
             print(acc_vals[i])
 

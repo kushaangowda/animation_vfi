@@ -2,6 +2,17 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
+class AttentionModule(nn.Module):
+    def __init__(self, feature_channels):
+        super(AttentionModule, self).__init__()
+        self.conv = nn.Conv2d(feature_channels, 1, kernel_size=1)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, features, mask):
+        mask_resized = F.interpolate(mask, size=(features.size(2), features.size(3)), mode='bilinear', align_corners=True).float()
+        attention = self.sigmoid(self.conv(mask_resized))
+        return features * attention
+
 class SelfAttentionBlock(nn.Module):
     ''' 
         This block is used from the encoder block 

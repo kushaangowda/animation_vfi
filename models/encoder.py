@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 from collections import deque
-from layers import BasicBlock, TransformerEncoderBlock, Downsample
+from layers import BasicBlock, TransformerEncoderBlock, Downsample, AttentionModule
 
 class ResEncoderBlock(nn.Module):
     def __init__(self,in_channels,out_channels,patch_dim,n_heads,stride,padding,resnet_bias
@@ -11,16 +11,14 @@ class ResEncoderBlock(nn.Module):
         self.p = patch_dim*patch_dim
         self.resnet = BasicBlock(in_channels,out_channels,stride,padding,resnet_bias)
         self.downsample = Downsample(out_channels)
+        self.attention = AttentionModule(1)
         
-    def forward(self, x):
-        # print(f"E:{x.shape}")
+    def forward(self, x, mask):
         x = self.resnet(x)
-        # print(f"E:{x.shape}")
+        x = self.attention(x,mask)
         resO = x
         tranO = x
         x = self.downsample(x)
-        # print(f"E:{x.shape}")
-        # print("----------")
         return x, resO, tranO
 
 class ResEncoder(nn.Module):
@@ -39,9 +37,9 @@ class ResEncoder(nn.Module):
                 resnet_bias,dim_ff,t_layers)
             for i in range(num_layers)
         ])
-    def forward(self, x):
+    def forward(self, x, mask):
         for layer in self.layers:
-            x, resO, tranO = layer(x)
+            x, resO, tranO = layer(x, mask)
             self.skips.append((resO, tranO))
         return x, self.skips
     

@@ -6,6 +6,10 @@ from .decoder import ResDecoder
 from layers import TransformerEncoderBlock
 from .outputLayer import OutputLayer
 
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
 class ResUNet(nn.Module):
     def __init__(self,in_channels,out_channels,patch_dim=16,n_heads=4,blocks=1,bn_blocks=1):
         super(ResUNet,self).__init__()
@@ -26,9 +30,9 @@ class ResUNet(nn.Module):
                                 patch_dim//2**(blocks-1),n_heads,num_layers=blocks)
         self.out = OutputLayer(in_channels[0],3)
 
-    def forward(self,x):
-        x,skips = self.encoder(x)
+    def forward(self,x,mask):
+        x,skips = self.encoder(x,mask)
         x = self.bottleNeck(x)
-        x = self.decoder(x,skips)
+        x = self.decoder(x,skips,mask)
         x = self.out(x)
         return x
