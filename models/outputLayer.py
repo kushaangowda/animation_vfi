@@ -10,3 +10,12 @@ class OutputLayer(nn.Module):
     
     def forward(self,x):
         return self.sigmoid(self.conv(x))
+
+class OptOutputLayer(nn.Module):
+    def __init__(self,in_channels,out_channels):
+        super(OptOutputLayer,self).__init__()
+        self.conv1 = nn.Conv2d(in_channels,out_channels,1)
+        self.conv2 = nn.Conv2d(in_channels,out_channels,1)
+    
+    def forward(self,x):
+        return torch.cat((self.conv1(x), self.conv2(x)), dim=1)

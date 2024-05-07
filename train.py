@@ -4,6 +4,7 @@ from torch.nn import functional as F
 from models.ResUNet import ResUNet
 from models.TransUNet import TransUNet
 from models.UNet import UNet
+from models.OptNet import OptNet
 from utils.data_loader import create_loaders
 from torch.nn.parallel import DistributedDataParallel as DDP
 from tqdm import tqdm
@@ -37,38 +38,51 @@ class PerceptualLoss(nn.Module):
         return ploss1 + ploss2 + ploss3
 
 
-def dataload(file_path,batch_size,n_w):
-    train_loader, test_loader = create_loaders(file_path, batch_size=batch_size, test_size=0.2, 
+def dataload(file_path,batch_size,n_w,task):
+    train_loader, test_loader = create_loaders(file_path, task, batch_size=batch_size, test_size=0.2, 
                                                 random_seed=42, n_w=n_w)
     return train_loader, test_loader
 
-def setup(lr,wd,in_channels,out_channels,n_layers=5,bn_layers=2,model_path=None,model_type=1):
+def setup(lr,wd,in_channels,out_channels,n_layers=5,bn_layers=2,model_path=None,model_type=1,task='vfi'):
     assert len(in_channels) == n_layers and len(out_channels) == n_layers, \
     'Error: channels should be same as number of layers'
-    if model_type == 0:
-        print("Using simple UNet")
-        model = UNet(in_channels=in_channels,out_channels=out_channels,
-                        blocks=n_layers,bn_blocks=bn_layers)
-    elif model_type == 1:
-        print("Using ResUNet")
-        model = ResUNet(in_channels=in_channels,out_channels=out_channels,
-                blocks=n_layers,bn_blocks=bn_layers)
+    if task == 'vfi':
+        if model_type == 0:
+            print("Using simple UNet")
+            model = UNet(in_channels=in_channels,out_channels=out_channels,
+                            blocks=n_layers,bn_blocks=bn_layers)
+        elif model_type == 1:
+            print("Using ResUNet")
+            model = ResUNet(in_channels=in_channels,out_channels=out_channels,
+                    blocks=n_layers,bn_blocks=bn_layers)
+        else:
+            print("Using TransUNet")
+            model = TransUNet(in_channels=in_channels,out_channels=out_channels,
+                    blocks=n_layers,bn_blocks=bn_layers)
+    elif task == 'optFlow':
+        print("Using OptNet")
+        model = OptNet(in_channels=in_channels,out_channels=out_channels,
+                            blocks=n_layers,bn_blocks=bn_layers)
     else:
-        print("Using TransUNet")
-        model = TransUNet(in_channels=in_channels,out_channels=out_channels,
-                blocks=n_layers,bn_blocks=bn_layers)
+        raise Exception("Invalid task, use --task\"vfi\" or --task\"optFlow\"")
+        
         
     if model_path is not None:
         try:
             print("Loading model")
             model.load_state_dict(torch.load(model_path))
-        except:
+        except Exception as e:
             print("Couldn't load model weights")
+            print("Error:",e)
 
     optim = torch.optim.Adam(model.parameters(), lr=lr,weight_decay=wd)
-    criterion1 = PerceptualLoss(device='cuda')
-    criterion2 = nn.L1Loss()
-    return model,[criterion1,criterion2],optim
+    
+    if task == 'vfi':
+        criteria = [PerceptualLoss(device='cuda'), nn.L1Loss()]
+    elif task == 'optFlow':
+        criteria = [nn.MSELoss()]
+        
+    return model,criteria,optim
 
 def calculate_ssim_psnr(img1, img2):
     # Initialize metrics
@@ -80,7 +94,7 @@ def calculate_ssim_psnr(img1, img2):
 
     return ssim_value.detach(), psnr_value.detach()
 
-def train(data_loader,test_loader,model,epochs,device,criteria,optim,local_rank,rank):
+def train_vfi(data_loader,test_loader,model,epochs,device,criteria,optim,local_rank,rank):
     print(f"Proc {rank} using device {device}")
     model = DDP(model,device_ids=[local_rank])
     total_step = len(data_loader)
@@ -198,3 +212,90 @@ def train(data_loader,test_loader,model,epochs,device,criteria,optim,local_rank,
             best_test_ssim = avg_test_loss
             torch.save(model.module.state_dict(), f'best_model_{timestamp}.pth')
             print(f'Best model saved with Test Acc: {avg_test_loss:.4f}')
+
+def train_optFlow(data_loader,test_loader,model,epochs,device,criteria,optim,local_rank,rank):
+    print(f"Proc {rank} using device {device}")
+    model = DDP(model,device_ids=[local_rank])
+    best_test_loss = 1000000
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S") 
+
+    for epoch in range(epochs):
+        avg_train_loss = 0
+        avg_test_loss = 0
+        total_train_batch = 0
+        total_test_batch = 0
+        
+        data_loader.sampler.set_epoch(epoch)
+
+        print(f"Epoch {epoch + 1}:")
+        data_iterator = iter(data_loader)
+
+        for _ in tqdm(range(len(data_loader)),desc='Training',disable=(rank != 0)):
+            model.train()
+            images,labels = next(data_iterator)
+            images = torch.cat(images,dim=1)
+            images = images.to(device)
+            labels = labels.to(device)
+            optim.zero_grad()
+
+            # Forward pass
+            outputs = model(images)
+            loss = criteria[0](outputs, labels)
+
+            # Backward and optimize
+            loss.backward()
+            optim.step()
+
+            model.eval()
+            # Calculate accuracy and loss
+            avg_train_loss += loss.item()
+
+            total_train_batch += 1
+
+        test_iterator = iter(test_loader)
+        for _ in  tqdm(range(len(test_loader)),desc='Testing'):
+            model.eval()
+            images,labels = next(test_iterator)
+            
+            # Move tensors to configured device
+            images = torch.cat(images,dim=1)
+            images = images.to(device)
+            labels = labels.to(device)
+
+            # Calculate accuracy
+            outputs = model(images)
+            loss = criteria[0](outputs, labels)
+
+            avg_test_loss += loss.item()
+
+            total_test_batch += 1
+
+        avg_train_loss = avg_train_loss/total_train_batch
+        avg_test_loss = avg_test_loss/total_test_batch
+        
+        if rank == 0:
+            print(
+                f'Proc: {rank} Epoch [{epoch+1}/{epochs}], \
+                Training Loss: {avg_train_loss:.4f}, \
+                Test Loss: {avg_test_loss:.4f}'
+            )
+
+            wandb.log({
+                "Average Training Loss": avg_train_loss,
+                "Average Test Loss": avg_test_loss,
+                "epoch": epoch
+            })
+
+
+        if avg_test_loss < best_test_loss and rank == 0:
+            best_test_loss = avg_test_loss
+            torch.save(model.module.state_dict(), f'optFlow_model_{timestamp}.pth')
+            print(f'Best model saved with Test Loss: {avg_test_loss:.4f}')
+            
+def train(data_loader,test_loader,model,epochs,device,criteria,optim,local_rank,rank,task):
+    if task == 'vfi':
+        train_vfi(data_loader,test_loader,model,epochs,device,criteria,optim,local_rank,rank)
+    elif task == 'optFlow':
+        train_optFlow(data_loader,test_loader,model,epochs,device,criteria,optim,local_rank,rank)
+    else:
+        raise Exception("Invalid task")
