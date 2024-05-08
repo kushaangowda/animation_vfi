@@ -28,7 +28,7 @@ def main(file_path,in_channels,out_channels,lr,wd,world_size,rank,local_rank,epo
         data_loader, test_loader = dataload(file_path,batch_size,n_workers,task) # load the data
         (model,criteria,optim) = setup(
                                     lr,wd,in_channels,out_channels,
-                                    n_layers=4,bn_layers=2,
+                                    n_layers=len(in_channels),bn_layers=2,
                                     model_type=type,
                                     model_path=model_path,
                                     task=task
@@ -49,7 +49,7 @@ def main(file_path,in_channels,out_channels,lr,wd,world_size,rank,local_rank,epo
         test_loader = dataload_predict(file_path,batch_size,n_workers,task) # load the data
         model = setup_predict(
                     in_channels,out_channels,
-                    n_layers=4,bn_layers=2,
+                    n_layers=len(in_channels),bn_layers=2,
                     model_type=type,
                     model_path=model_path,
                     task=task
@@ -90,8 +90,8 @@ if __name__ == '__main__':
     epochs = args.epochs
     
     if args.task == "vfi":
-        in_channels = [5,32,64,128]
-        out_channels = [32,64,128,256]
+        in_channels = [5,32,128,256,512]
+        out_channels = [32,128,256,512,1024]
     elif args.task == "optFlow":
         in_channels = [3,32,64,128]
         out_channels = [32,64,128,256]
