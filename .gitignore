@@ -2,7 +2,7 @@ datasets
 data
 image_data*.h5
 *.pth
-predictions*
+predictions*/
 wandb
 
 # Compiled source #
