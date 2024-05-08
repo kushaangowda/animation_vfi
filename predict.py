@@ -93,15 +93,14 @@ def predict_vfi(test_loader,model,device,num_batches=None):
 
     if num_batches is None:
         num_batches = len(test_loader)
-
+        
     test_iterator = iter(test_loader)
-    
-    acc_vals = []
 
     for i in  range(num_batches):
         images,labels = next(test_iterator)
         mask = images[2].to(device)
         images = images[:-1]
+            
         images = torch.cat(images,dim=1)
             
         model.eval()
@@ -111,34 +110,8 @@ def predict_vfi(test_loader,model,device,num_batches=None):
         
         # Calculate accuracy
         outputs = model(images,mask)
-        
-        train_ssim , train_psnr = calculate_ssim_psnr(outputs, labels)
-        
-        acc_vals.append(train_ssim.cpu())
-        
-    test_iterator = iter(test_loader)
 
-    top_indices = np.argsort(np.array(acc_vals))[-10:]
-
-    for i in  range(num_batches):
-        images,labels = next(test_iterator)
-        mask = images[2].to(device)
-        images = images[:-1]
-        
-        if i in top_indices or i in [317,371]:
-            images = torch.cat(images,dim=1)
-                
-            model.eval()
-            # Move tensors to configured device
-            images = images.to(device)
-            labels = labels.to(device)
-            
-            # Calculate accuracy
-            outputs = model(images,mask)
-            
-            print(acc_vals[i])
-
-            save_img(images[:,:3], labels, outputs.detach(), i, images[:,3:])
+        save_img(images[:,:3], labels, outputs.detach(), i, images[:,3:])
     
     
 def predict_optFlow(test_loader,model,device,num_batches=None):

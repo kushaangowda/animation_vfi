@@ -98,7 +98,7 @@ def train_vfi(data_loader,test_loader,model,epochs,device,criteria,optim,local_r
     print(f"Proc {rank} using device {device}")
     model = DDP(model,device_ids=[local_rank])
     total_step = len(data_loader)
-    best_test_ssim = 10
+    best_test_ssim = 0
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S") 
 
     for epoch in range(epochs):
@@ -120,18 +120,13 @@ def train_vfi(data_loader,test_loader,model,epochs,device,criteria,optim,local_r
         for _ in tqdm(range(len(data_loader)),desc='Training',disable=(rank != 0)):
             model.train()
             images,labels = next(data_iterator)
-            # optFlow = images[1].to(device)
             mask = images[2].to(device)
             images = images[:-1]
             # Move tensors to configured device
-            # print(images[0].shape, images[1].shape)
             images = torch.cat(images,dim=1)
             images = images.to(device)
             labels = labels.to(device)
             optim.zero_grad()
-            
-            # optFlow = (optFlow[:,0]**2 + optFlow[:,1]**2)**0.5
-            # optFlowMask = (optFlow >= 10).to(torch.uint8).unsqueeze(1)
             
 
             # Forward pass
@@ -156,16 +151,12 @@ def train_vfi(data_loader,test_loader,model,epochs,device,criteria,optim,local_r
         for _ in  tqdm(range(len(test_loader)),desc='Testing'):
             model.eval()
             images,labels = next(test_iterator)
-            # optFlow = images[1].to(device)
             mask = images[2].to(device)
             images = images[:-1]
             # Move tensors to configured device
             images = torch.cat(images,dim=1)
             images = images.to(device)
             labels = labels.to(device)
-            
-            # optFlow = (optFlow[:,0]**2 + optFlow[:,1]**2)**0.5
-            # optFlowMask = (optFlow >= 10).to(torch.uint8).unsqueeze(1)
 
             # Calculate accuracy
             outputs = model(images,mask)
@@ -208,10 +199,10 @@ def train_vfi(data_loader,test_loader,model,epochs,device,criteria,optim,local_r
             })
 
 
-        if avg_test_loss < best_test_ssim and rank == 0:
-            best_test_ssim = avg_test_loss
+        if avg_test_ssim > best_test_ssim and rank == 0:
+            best_test_ssim = avg_test_ssim
             torch.save(model.module.state_dict(), f'best_model_{timestamp}.pth')
-            print(f'Best model saved with Test Acc: {avg_test_loss:.4f}')
+            print(f'Best model saved with Test SSIM: {avg_test_ssim:.4f}')
 
 def train_optFlow(data_loader,test_loader,model,epochs,device,criteria,optim,local_rank,rank):
     print(f"Proc {rank} using device {device}")
