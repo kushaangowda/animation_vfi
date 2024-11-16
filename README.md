@@ -4,14 +4,12 @@
 
 We explore a sophisticated method for video frame interpolation in cartoon videos, utilizing a specially designed optical flow model with enhanced skip connections. The method leverages motion information to generate intermediate frames between consecutive frames effectively. By employing a U-Net architecture with a ResNet-based encoder and decoder, enhanced by attention modules, our approach precisely interpolates frames by focusing on areas with significant motion. The use of a composite loss function combining multilayer Perceptual loss and L1 loss helps capture the unique motion and style characteristics inherent to cartoon animations. This technique is especially suited for animated media that demands precise motion representation.
 
-<img src="figures/probForm.png"/>
-
 ## Setup
 
 1. Clone this repository:
 
    ```bash
-   git clone https://github.com/ecbme6040/e6691-2024spring-project-skar-sb4839-kg3081-av3180.git
+   git clone https://github.com/kushaangowda/animation_vfi.git
    ```
 
 2. Install the dependencies:
