@@ -1,5 +1,3 @@
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-24ddc0f5d75046c5622901739e7c5dd533143b0c8e959d652212380cedb1ea36.svg)](https://classroom.github.com/a/ifbeTrPr)
-
 # Animation Video Frame Interpolation
 
 We explore a sophisticated method for video frame interpolation in cartoon videos, utilizing a specially designed optical flow model with enhanced skip connections. The method leverages motion information to generate intermediate frames between consecutive frames effectively. By employing a U-Net architecture with a ResNet-based encoder and decoder, enhanced by attention modules, our approach precisely interpolates frames by focusing on areas with significant motion. The use of a composite loss function combining multilayer Perceptual loss and L1 loss helps capture the unique motion and style characteristics inherent to cartoon animations. This technique is especially suited for animated media that demands precise motion representation.
